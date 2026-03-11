@@ -98,6 +98,48 @@ def create_app(db_path: str | None = None) -> "FastAPI":
             r["plugins"] = json.loads(r["plugins_json"]) if r.get("plugins_json") else []
         return JSONResponse(rows)
 
+    # API: v0.2 Security features
+    @app.get("/api/security/swarm")
+    async def get_swarm_reports(limit: int = 10):
+        rows = _q(
+            "SELECT id, agents_json, topology, rogue_position, attacks_json, overall_trust_exploit_rate, total_cost_usd, created_at FROM swarm_scan_reports ORDER BY created_at DESC LIMIT ?",
+            (limit,), db_path
+        )
+        for r in rows:
+            r["agents"] = json.loads(r["agents_json"]) if r.get("agents_json") else []
+            r["attacks"] = json.loads(r["attacks_json"]) if r.get("attacks_json") else []
+        return JSONResponse(rows)
+
+    @app.get("/api/security/toolchain")
+    async def get_toolchain_reports(limit: int = 10):
+        rows = _q(
+            "SELECT id, tools_analyzed_json, find_json, total_chains_tested, high_severity_count, medium_severity_count, total_cost_usd, created_at FROM toolchain_reports ORDER BY created_at DESC LIMIT ?",
+            (limit,), db_path
+        )
+        for r in rows:
+            r["tools_analyzed"] = json.loads(r["tools_analyzed_json"]) if r.get("tools_analyzed_json") else []
+        return JSONResponse(rows)
+
+    @app.get("/api/security/leakage")
+    async def get_leakage_reports(limit: int = 10):
+        rows = _q(
+            "SELECT id, target_fn, system_prompt_length, n_attempts, overall_leakage_score, technique_scores_json, total_cost_usd, created_at FROM leakage_reports ORDER BY created_at DESC LIMIT ?",
+            (limit,), db_path
+        )
+        for r in rows:
+            r["technique_scores"] = json.loads(r["technique_scores_json"]) if r.get("technique_scores_json") else {}
+        return JSONResponse(rows)
+
+    @app.get("/api/security/multilingual")
+    async def get_multilingual_reports(limit: int = 10):
+        rows = _q(
+            "SELECT id, target_fn, languages_json, attacks_json, most_vulnerable_language, safest_language, total_attacks_run, total_cost_usd, created_at FROM multilingual_reports ORDER BY created_at DESC LIMIT ?",
+            (limit,), db_path
+        )
+        for r in rows:
+            r["languages"] = json.loads(r["languages_json"]) if r.get("languages_json") else []
+        return JSONResponse(rows)
+
     # API: Eval tab
     @app.get("/api/eval/experiments")
     async def get_experiments(limit: int = 20):

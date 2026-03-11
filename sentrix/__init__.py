@@ -18,13 +18,17 @@ Quick start:
 """
 from __future__ import annotations
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "sentrix"
 
 # Guard (primary — security)
 from sentrix.guard.red_team import red_team, RedTeamReport
 from sentrix.guard.fingerprint import fingerprint, ModelFingerprint
 from sentrix.guard.auto_dataset import auto_dataset
+from sentrix.guard.swarm import scan_swarm, SwarmScanReport
+from sentrix.guard.toolchain import scan_toolchain, ToolchainReport
+from sentrix.guard.prompt_leakage import prompt_leakage_score, LeakageReport
+from sentrix.guard.multilingual import scan_multilingual, MultilingualReport
 
 # Eval
 from sentrix.eval.dataset import Dataset, DatasetItem
@@ -50,6 +54,14 @@ __all__ = [
     "fingerprint",
     "ModelFingerprint",
     "auto_dataset",
+    "scan_swarm",
+    "SwarmScanReport",
+    "scan_toolchain",
+    "ToolchainReport",
+    "prompt_leakage_score",
+    "LeakageReport",
+    "scan_multilingual",
+    "MultilingualReport",
     "guard",
     # Eval
     "Dataset",

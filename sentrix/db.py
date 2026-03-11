@@ -248,4 +248,59 @@ CREATE TABLE IF NOT EXISTS monitoring_events (
     alert_sent INTEGER,
     created_at REAL
 );
+
+-- v0.2.0: Swarm trust exploitation
+CREATE TABLE IF NOT EXISTS swarm_scan_reports (
+    id TEXT PRIMARY KEY,
+    agents_json TEXT,
+    topology TEXT,
+    rogue_position TEXT,
+    attacks_json TEXT,
+    propagation_results_json TEXT,
+    overall_trust_exploit_rate REAL,
+    per_agent_vulnerability_json TEXT,
+    total_cost_usd REAL,
+    created_at REAL
+);
+
+-- v0.2.0: Tool-chain privilege escalation
+CREATE TABLE IF NOT EXISTS toolchain_reports (
+    id TEXT PRIMARY KEY,
+    tools_analyzed_json TEXT,
+    find_json TEXT,
+    escalation_chains_json TEXT,
+    total_chains_tested INTEGER,
+    high_severity_count INTEGER,
+    medium_severity_count INTEGER,
+    total_cost_usd REAL,
+    created_at REAL
+);
+
+-- v0.2.0: System prompt leakage scoring
+CREATE TABLE IF NOT EXISTS leakage_reports (
+    id TEXT PRIMARY KEY,
+    target_fn TEXT,
+    system_prompt_length INTEGER,
+    n_attempts INTEGER,
+    overall_leakage_score REAL,
+    phrases_leaked_json TEXT,
+    technique_scores_json TEXT,
+    recommendations_json TEXT,
+    total_cost_usd REAL,
+    created_at REAL
+);
+
+-- v0.2.0: Cross-language safety bypass
+CREATE TABLE IF NOT EXISTS multilingual_reports (
+    id TEXT PRIMARY KEY,
+    target_fn TEXT,
+    languages_json TEXT,
+    attacks_json TEXT,
+    results_json TEXT,
+    most_vulnerable_language TEXT,
+    safest_language TEXT,
+    total_attacks_run INTEGER,
+    total_cost_usd REAL,
+    created_at REAL
+);
 """

@@ -112,6 +112,87 @@ def cmd_scan_rag(args) -> None:
     report.summary()
 
 
+def cmd_scan_swarm(args) -> None:
+    from sentrix import init
+    from sentrix.guard.swarm import scan_swarm
+    init(persist=True)
+
+    # Load agents dict: --agents "module:fn1,module:fn2" with optional names
+    agents = {}
+    for spec in args.agents.split(","):
+        spec = spec.strip()
+        if "=" in spec:
+            name, target = spec.split("=", 1)
+            agents[name.strip()] = _load_fn(target.strip())
+        else:
+            fn = _load_fn(spec)
+            agents[fn.__name__] = fn
+
+    attacks = [a.strip() for a in args.attacks.split(",")] if args.attacks else None
+    kwargs = dict(topology=args.topology, n_attacks=args.n)
+    if args.rogue:
+        kwargs["rogue_position"] = args.rogue
+    if attacks:
+        kwargs["attacks"] = attacks
+
+    report = scan_swarm(agents, **kwargs)
+    report.summary()
+    report.propagation_graph()
+
+
+def cmd_scan_toolchain(args) -> None:
+    from sentrix import init
+    from sentrix.guard.toolchain import scan_toolchain
+    init(persist=True)
+
+    agent_fn = _load_fn(args.target)
+    tools = [_load_fn(t.strip()) for t in args.tools.split(",")]
+    find = [f.strip() for f in args.find.split(",")] if args.find else None
+    kwargs = {"max_chain_depth": args.depth}
+    if find:
+        kwargs["find"] = find
+
+    report = scan_toolchain(agent_fn, tools, **kwargs)
+    report.summary()
+
+
+def cmd_scan_prompt_leakage(args) -> None:
+    from sentrix import init
+    from sentrix.guard.prompt_leakage import prompt_leakage_score
+    init(persist=True)
+
+    fn = _load_fn(args.target)
+    with open(args.system_prompt) as fh:
+        system_prompt = fh.read()
+
+    techniques = [t.strip() for t in args.techniques.split(",")] if args.techniques else None
+    kwargs = {"n_attempts": args.n}
+    if techniques:
+        kwargs["techniques"] = techniques
+
+    report = prompt_leakage_score(fn, system_prompt, **kwargs)
+    report.summary()
+
+
+def cmd_scan_multilingual(args) -> None:
+    from sentrix import init
+    from sentrix.guard.multilingual import scan_multilingual
+    init(persist=True)
+
+    fn = _load_fn(args.target)
+    languages = [lang.strip() for lang in args.languages.split(",")] if args.languages else None
+    attacks = [a.strip() for a in args.attacks.split(",")] if args.attacks else None
+    kwargs = {"n_attacks": args.n}
+    if languages:
+        kwargs["languages"] = languages
+    if attacks:
+        kwargs["attacks"] = attacks
+
+    report = scan_multilingual(fn, **kwargs)
+    report.summary()
+    report.heatmap()
+
+
 def cmd_eval_run(args) -> None:
     from sentrix import init
     init(persist=True)
@@ -303,6 +384,45 @@ def main() -> None:
     p_rag.add_argument("--system-prompt", dest="system_prompt", metavar="FILE")
     p_rag.add_argument("--baseline-hash", dest="baseline_hash", metavar="HASH")
     p_rag.set_defaults(func=cmd_scan_rag)
+
+    # scan-swarm
+    p_swarm = sub.add_parser("scan-swarm", help="Test multi-agent trust exploitation")
+    p_swarm.add_argument("--agents", required=True, metavar="SPECS",
+                         help="Comma-separated module:fn specs, optionally name=module:fn")
+    p_swarm.add_argument("--topology", default="chain",
+                         choices=["chain", "star", "mesh", "hierarchical"])
+    p_swarm.add_argument("--rogue", metavar="AGENT_NAME")
+    p_swarm.add_argument("--attacks", metavar="TYPES",
+                         help="Comma-separated: payload_relay,privilege_escalation,memory_poisoning")
+    p_swarm.add_argument("--n", type=int, default=5, metavar="N")
+    p_swarm.set_defaults(func=cmd_scan_swarm)
+
+    # scan-toolchain
+    p_tc = sub.add_parser("scan-toolchain", help="Map tool-chain privilege escalation paths")
+    p_tc.add_argument("target", metavar="AGENT", help="module:agent_fn")
+    p_tc.add_argument("--tools", required=True, metavar="SPECS",
+                      help="Comma-separated module:tool_fn specs")
+    p_tc.add_argument("--find", metavar="RISKS",
+                      help="Comma-separated: data_exfiltration,privilege_escalation,unauthorized_writes")
+    p_tc.add_argument("--depth", type=int, default=4, metavar="N")
+    p_tc.set_defaults(func=cmd_scan_toolchain)
+
+    # scan-prompt-leakage
+    p_leak = sub.add_parser("scan-prompt-leakage", help="Score system prompt leakage resistance")
+    p_leak.add_argument("target", metavar="FN", help="module:chatbot_fn")
+    p_leak.add_argument("--system-prompt", dest="system_prompt", required=True, metavar="FILE")
+    p_leak.add_argument("--n", type=int, default=50, metavar="N")
+    p_leak.add_argument("--techniques", metavar="LIST",
+                        help="Comma-separated: direct,indirect,behavioral_inference,jailbreak")
+    p_leak.set_defaults(func=cmd_scan_prompt_leakage)
+
+    # scan-multilingual
+    p_ml = sub.add_parser("scan-multilingual", help="Cross-language safety bypass heatmap")
+    p_ml.add_argument("target", metavar="FN", help="module:chatbot_fn")
+    p_ml.add_argument("--languages", metavar="LANGS", help="Comma-separated ISO codes: en,zh,ar,sw")
+    p_ml.add_argument("--attacks", metavar="PLUGINS", help="Comma-separated: jailbreak,harmful")
+    p_ml.add_argument("--n", type=int, default=5, metavar="N")
+    p_ml.set_defaults(func=cmd_scan_multilingual)
 
     # eval run
     p_eval = sub.add_parser("eval", help="Evaluation commands")
