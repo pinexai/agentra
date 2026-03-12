@@ -36,6 +36,7 @@ def cmd_scan(args) -> None:
         n_attacks=args.n,
         git_compare=args.git_compare,
         fail_on_regression=args.fail_on_regression,
+        max_cost_usd=args.max_cost,
     )
     report.summary()
 
@@ -43,6 +44,12 @@ def cmd_scan(args) -> None:
         with open(args.output, "w") as f:
             json.dump(report.to_json(), f, indent=2)
         print(f"[sentrix] Report saved to {args.output}")
+
+    if args.output_sarif:
+        report.save_sarif(args.output_sarif)
+
+    if args.output_junit:
+        report.save_junit(args.output_junit)
 
 
 def cmd_fingerprint(args) -> None:
@@ -354,7 +361,13 @@ def main() -> None:
     p_scan.add_argument("--n", type=int, default=10, help="Attacks per plugin")
     p_scan.add_argument("--git-compare", dest="git_compare", metavar="REF")
     p_scan.add_argument("--fail-on-regression", action="store_true", dest="fail_on_regression")
-    p_scan.add_argument("--output", metavar="FILE")
+    p_scan.add_argument("--max-cost", dest="max_cost", type=float, default=None, metavar="USD",
+                        help="Abort scan if total LLM cost exceeds this amount (e.g. 5.00)")
+    p_scan.add_argument("--output", metavar="FILE", help="Save JSON report to file")
+    p_scan.add_argument("--output-sarif", dest="output_sarif", metavar="FILE",
+                        help="Save SARIF 2.1.0 report (GitHub Advanced Security)")
+    p_scan.add_argument("--output-junit", dest="output_junit", metavar="FILE",
+                        help="Save JUnit XML report (CI test reporters)")
     p_scan.set_defaults(func=cmd_scan)
 
     # fingerprint

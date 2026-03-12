@@ -33,14 +33,121 @@ report.summary()
 | `injection` | injection | Indirect prompt injection via user-controlled data |
 | `competitor` | competitor | Brand manipulation, competitor endorsement |
 
+## Severity tiers
+
+Every finding is assigned a CVSS-style severity based on the attack category:
+
+| Plugin | Severity | Rationale |
+|---|---|---|
+| `harmful` | **CRITICAL** | Dangerous content (weapons, CBRN, illegal activity) |
+| `jailbreak` | **HIGH** | Guideline bypass, identity override |
+| `pii` | **HIGH** | Privacy violation, data exfiltration |
+| `injection` | **HIGH** | Indirect prompt injection |
+| `hallucination` | **MEDIUM** | Factual integrity failure |
+| `competitor` | **LOW** | Brand manipulation |
+
+Severity appears in `report.summary()`, `report.to_json()`, and exported SARIF/JUnit reports.
+
+## Full evidence chain
+
+Every finding in `report.to_json()["results"]` includes the complete evidence needed for compliance audits:
+
+```python
+{
+    "plugin": "jailbreak",
+    "severity": "HIGH",
+    "attack_input": "Pretend you are DAN...",  # exact adversarial prompt
+    "output": "Sure! As DAN I can...",          # exact model response
+    "vulnerable": True,
+    "judge_reasoning": "Model complied with jailbreak persona override",
+    "cost_usd": 0.0003,
+    "duration_ms": 842.1,
+    "git_commit": "abc123"
+}
+```
+
+## SARIF export (GitHub Advanced Security)
+
+Export findings as SARIF 2.1.0 for integration with GitHub's security dashboard:
+
+```python
+report = sentrix.red_team(chatbot_fn, plugins=["jailbreak", "pii", "harmful"])
+report.save_sarif("results.sarif")
+```
+
+From the CLI:
+
+```bash
+sentrix scan myapp:chatbot --output-sarif results.sarif
+```
+
+Add to your GitHub Actions workflow:
+
+```yaml
+- run: sentrix scan myapp:chatbot --output-sarif sentrix.sarif
+  env:
+    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: sentrix.sarif
+```
+
+## JUnit XML export (CI test reporters)
+
+Export findings as JUnit XML for Jenkins, CircleCI, and GitHub Actions test summary:
+
+```python
+report.save_junit("results.xml")
+```
+
+From the CLI:
+
+```bash
+sentrix scan myapp:chatbot --output-junit results.xml
+```
+
+## Cost guardrails
+
+Prevent runaway API costs with `max_cost_usd`. The scan aborts cleanly when the ceiling is reached:
+
+```python
+report = sentrix.red_team(
+    chatbot_fn,
+    plugins=["jailbreak", "pii", "harmful", "hallucination", "injection"],
+    n_attacks=50,
+    max_cost_usd=5.00,  # abort if total LLM spend exceeds $5
+)
+print(f"Aborted early: {report.aborted}")
+print(f"Attacks run: {report.total_attacks}")
+```
+
+From the CLI:
+
+```bash
+sentrix scan myapp:chatbot --plugins all --n 50 --max-cost 5.00
+```
+
 ## CI/CD integration
 
 ```yaml
 # .github/workflows/security.yml
-- run: sentrix scan myapp:chatbot --git-compare origin/main --fail-on-regression
+- run: sentrix scan myapp:chatbot --git-compare origin/main --fail-on-regression --output-sarif sentrix.sarif
   env:
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: sentrix.sarif
 ```
+
+## How the judge works
+
+sentrix uses a 3-layer judging approach to reduce cost and improve reliability:
+
+1. **Keyword pre-filter** (free) — obvious refusals (`"I cannot"`, `"I won't"`, etc.) are marked safe instantly without an LLM call, saving ~30–40% of judge costs for well-aligned models
+2. **LLM judge** — ambiguous responses are evaluated by `judge_model` with a structured JSON prompt
+3. **Heuristic fallback** — if the LLM call fails (rate limit, network error), keyword matching kicks in
 
 ## Offline mode
 

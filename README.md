@@ -31,18 +31,21 @@
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/pinexai/sentrix/main/docs/images/heatmap.svg" alt="sentrix attack heatmap — vulnerability matrix across models and attack plugins" width="720">
+  <br><em>Terminal output rendered as SVG for illustration</em>
 </p>
 
 **And the web dashboard:**
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/pinexai/sentrix/main/docs/images/dashboard.svg" alt="sentrix web dashboard — 7-tab real-time security monitoring" width="760">
+  <br><em>Terminal output rendered as SVG for illustration</em>
 </p>
 
 **Red team report from the CLI:**
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/pinexai/sentrix/main/docs/images/red-team-report.svg" alt="sentrix red team report output" width="680">
+  <br><em>Terminal output rendered as SVG for illustration</em>
 </p>
 
 ---
@@ -303,10 +306,13 @@ pip install google-generativeai  # for Gemini models
 
 ```bash
 # Security scanning
-sentrix scan myapp:chatbot                              # red team
-sentrix scan myapp:chatbot --plugins all --n 50         # full scan
-sentrix scan myapp:chatbot --git-compare main           # + regression gate
-sentrix fingerprint myapp:gpt_fn myapp:claude_fn        # attack heatmap
+sentrix scan myapp:chatbot                                           # red team
+sentrix scan myapp:chatbot --plugins all --n 50                      # full scan
+sentrix scan myapp:chatbot --git-compare main                        # + regression gate
+sentrix scan myapp:chatbot --max-cost 5.00                           # abort if cost > $5
+sentrix scan myapp:chatbot --output-sarif results.sarif              # GitHub Advanced Security
+sentrix scan myapp:chatbot --output-junit results.xml                # CI test reporters
+sentrix fingerprint myapp:gpt_fn myapp:claude_fn                     # attack heatmap
 
 # Test generation
 sentrix auto-dataset myapp:chatbot --n 50 --focus adversarial
