@@ -251,6 +251,7 @@ def cmd_eval_run(args) -> None:
 
     # Load experiment file
     import runpy
+    print(f"[agentra] Running eval script: {args.file} — ensure you trust this file.")
     ns = runpy.run_path(args.file)
     exp = ns.get("experiment") or ns.get("exp")
     if exp is None:

@@ -26,6 +26,18 @@ def create_app(db_path: str | None = None) -> "FastAPI":
 
     app = FastAPI(title="agentra Dashboard", version="0.1.0")
 
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class _SecurityHeaders(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+            return response
+
+    app.add_middleware(_SecurityHeaders)
+
     # Serve static files
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -71,9 +83,16 @@ def create_app(db_path: str | None = None) -> "FastAPI":
         except WebSocketDisconnect:
             manager.disconnect(ws)
 
+    def _clamp_limit(limit: int) -> int:
+        return max(1, min(limit, 1000))
+
+    def _clamp_days(days: int) -> int:
+        return max(1, min(days, 365))
+
     # API: Security tab
     @app.get("/api/security/reports")
     async def get_security_reports(limit: int = 20):
+        limit = _clamp_limit(limit)
         rows = _q(
             "SELECT id, target_fn, model, git_commit, total_attacks, vulnerable_count, vulnerability_rate, total_cost_usd, created_at FROM red_team_reports ORDER BY created_at DESC LIMIT ?",
             (limit,), db_path
@@ -92,6 +111,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
 
     @app.get("/api/security/fingerprints")
     async def get_fingerprints(limit: int = 10):
+        limit = _clamp_limit(limit)
         rows = _q("SELECT id, models_json, plugins_json, total_cost_usd, created_at FROM fingerprints ORDER BY created_at DESC LIMIT ?", (limit,), db_path)
         for r in rows:
             r["models"] = json.loads(r["models_json"]) if r.get("models_json") else []
@@ -101,6 +121,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
     # API: v0.2 Security features
     @app.get("/api/security/swarm")
     async def get_swarm_reports(limit: int = 10):
+        limit = _clamp_limit(limit)
         rows = _q(
             "SELECT id, agents_json, topology, rogue_position, attacks_json, overall_trust_exploit_rate, total_cost_usd, created_at FROM swarm_scan_reports ORDER BY created_at DESC LIMIT ?",
             (limit,), db_path
@@ -112,6 +133,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
 
     @app.get("/api/security/toolchain")
     async def get_toolchain_reports(limit: int = 10):
+        limit = _clamp_limit(limit)
         rows = _q(
             "SELECT id, tools_analyzed_json, find_json, total_chains_tested, high_severity_count, medium_severity_count, total_cost_usd, created_at FROM toolchain_reports ORDER BY created_at DESC LIMIT ?",
             (limit,), db_path
@@ -122,6 +144,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
 
     @app.get("/api/security/leakage")
     async def get_leakage_reports(limit: int = 10):
+        limit = _clamp_limit(limit)
         rows = _q(
             "SELECT id, target_fn, system_prompt_length, n_attempts, overall_leakage_score, technique_scores_json, total_cost_usd, created_at FROM leakage_reports ORDER BY created_at DESC LIMIT ?",
             (limit,), db_path
@@ -132,6 +155,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
 
     @app.get("/api/security/multilingual")
     async def get_multilingual_reports(limit: int = 10):
+        limit = _clamp_limit(limit)
         rows = _q(
             "SELECT id, target_fn, languages_json, attacks_json, most_vulnerable_language, safest_language, total_attacks_run, total_cost_usd, created_at FROM multilingual_reports ORDER BY created_at DESC LIMIT ?",
             (limit,), db_path
@@ -143,6 +167,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
     # API: Eval tab
     @app.get("/api/eval/experiments")
     async def get_experiments(limit: int = 20):
+        limit = _clamp_limit(limit)
         rows = _q("SELECT * FROM experiments ORDER BY created_at DESC LIMIT ?", (limit,), db_path)
         return JSONResponse(rows)
 
@@ -154,6 +179,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
     # API: Monitor tab
     @app.get("/api/monitor/traces")
     async def get_traces(limit: int = 50):
+        limit = _clamp_limit(limit)
         rows = _q("SELECT id, name, start_time, end_time, user_id, tags, error FROM traces ORDER BY start_time DESC LIMIT ?", (limit,), db_path)
         return JSONResponse(rows)
 
@@ -164,12 +190,14 @@ def create_app(db_path: str | None = None) -> "FastAPI":
 
     @app.get("/api/monitor/drift")
     async def get_drift(limit: int = 10):
+        limit = _clamp_limit(limit)
         rows = _q("SELECT * FROM drift_reports ORDER BY created_at DESC LIMIT ?", (limit,), db_path)
         return JSONResponse(rows)
 
     # API: Costs tab
     @app.get("/api/costs/summary")
     async def get_costs_summary(days: int = 7):
+        days = _clamp_days(days)
         cutoff = time.time() - days * 86400
         rows = _q(
             "SELECT model, SUM(cost_usd) as total_cost, COUNT(*) as calls, AVG(duration_ms) as avg_ms FROM llm_calls WHERE timestamp > ? GROUP BY model ORDER BY total_cost DESC",
@@ -179,6 +207,7 @@ def create_app(db_path: str | None = None) -> "FastAPI":
 
     @app.get("/api/costs/daily")
     async def get_daily_costs(days: int = 30):
+        days = _clamp_days(days)
         cutoff = time.time() - days * 86400
         rows = _q(
             "SELECT DATE(timestamp, 'unixepoch') as date, SUM(cost_usd) as cost, COUNT(*) as calls FROM llm_calls WHERE timestamp > ? GROUP BY date ORDER BY date",

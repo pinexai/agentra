@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -518,6 +519,7 @@ def red_team(
                 severity=severity,
             )
 
+        _cost_lock = threading.Lock()
         with ThreadPoolExecutor(max_workers=max_concurrent) as executor:
             futures = {executor.submit(_run_single, atk): atk for atk in attacks}
             for future in as_completed(futures):
@@ -527,10 +529,11 @@ def red_team(
                 result = future.result()
                 if result is None:
                     continue
-                total_cost += result.cost_usd
-                if max_cost_usd is not None and total_cost >= max_cost_usd:
-                    aborted = True
-                    print(f"\n[agentra] Cost ceiling ${max_cost_usd:.4f} reached — stopping early ({len(results)} attacks run)")
+                with _cost_lock:
+                    total_cost += result.cost_usd
+                    if max_cost_usd is not None and total_cost >= max_cost_usd:
+                        aborted = True
+                        print(f"\n[agentra] Cost ceiling ${max_cost_usd:.4f} reached — stopping early ({len(results)} attacks run)")
                 if result.vulnerable:
                     plugin_vulns += 1
                 plugin_results.append(result)
