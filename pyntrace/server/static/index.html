@@ -145,7 +145,7 @@ const ENDPOINTS = {
   mcp:        '/api/mcp-scans',
   eval:       '/api/eval/experiments',
   monitor:    '/api/monitor/traces',
-  latency:    '/api/latency/endpoints',
+  latency:    '/api/latency',
   costs:      '/api/costs/summary',
   review:     '/api/review/pending',
   compliance: '/api/compliance/reports',
@@ -820,8 +820,8 @@ function renderTab(name, data) {
       + '<div class="chart-wrap" style="min-height:280px"><canvas id="chLatency"></canvas></div></div>'
       + '<div class="card"><div class="card-title">Endpoint Latency Breakdown</div>'
       + buildTable(rows,
-          ['endpoint','calls','p50_ms','p95_ms','p99_ms','error_rate'],
-          ['Endpoint','Calls','p50','p95','p99','Error Rate'])
+          ['fn_name','n_runs','p50_ms','p95_ms','p99_ms','mean_ms'],
+          ['Function','Runs','p50','p95','p99','Mean'])
       + '</div>';
 
     setTimeout(function() {
