@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e ".[eval]"
+          pip install -e ".[eval,server]"
           pip install pytest ruff
 
       - name: Lint
