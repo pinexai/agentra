@@ -44,6 +44,11 @@ nav:
     - Monitoring: monitor.md
     - Dashboard: dashboard.md
     - CI/CD Integration: ci.md
+  - Reference:
+    - Model Audit: model-audit.md
+    - Custom Plugins: plugins.md
+    - Provider Reference: providers.md
+    - Docker / Self-Hosting: docker.md
 
 plugins:
   - search

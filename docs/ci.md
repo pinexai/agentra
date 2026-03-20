@@ -70,3 +70,36 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 ```
+
+## Model Audit in CI
+
+Scan model checkpoints for malicious payloads and embedded secrets before they enter your registry:
+
+```yaml
+  model-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pyntrace
+
+      - name: Audit ML models
+        run: pyntrace audit-model ./models/ --fail-on-critical --format json --output model-audit.json
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-audit
+          path: model-audit.json
+```
+
+Or export SARIF for GitHub Advanced Security:
+
+```yaml
+      - run: pyntrace audit-model ./models/ --sarif model-audit.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: model-audit.sarif
+```
+
+See [Model Audit](model-audit.md) for all options.

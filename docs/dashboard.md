@@ -109,3 +109,13 @@ Select up to 4 scans from the Security tab table and click **Compare (N)** to op
 - `renderSwarmTopology()` — Canvas 2D multi-agent topology graph
 - `makeBoxPlot()` — Latency box plot (min/p50/p95/p99/max)
 - `renderSpanWaterfall()` — LLM/tool/retrieval/embed span timeline
+
+### Threat Feed tab
+
+`GET /api/threats/feed` serves the OWASP LLM Top 10 + pyntrace extras catalog sorted by severity. Use it to:
+
+- Browse the latest known attack techniques with descriptions and mitigations
+- Click **Test this attack** → calls `POST /api/threats/test` which queues a targeted red-team scan
+- Filter by severity or category
+
+Available under `/api/v1/threats/feed` for clients that use the versioned prefix.
